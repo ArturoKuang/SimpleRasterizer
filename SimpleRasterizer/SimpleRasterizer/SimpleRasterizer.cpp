@@ -1,21 +1,70 @@
-// SimpleRasterizer.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include "pch.h"
 #include <iostream>
+
+
+static const float inchToMm = 25.4;
+static const float M_PI = 3.14159;
+
+enum FitResolutionGate
+{
+	kFill = 0,
+	kOverscan
+};
+
+
+void computeScreenCoordinates(
+	const float& filmApertureWidth,
+	const float& filmApertureHeight,
+	const uint32_t& imageWidth,
+	const uint32_t& imageHeight,
+	const FitResolutionGate& fitFilm,
+	const float& nearClippingPlane,
+	const float& focalLength,
+	float& top, float& bottom, float& left, float& right
+)
+{
+	float filmAspectRatio = filmApertureWidth / filmApertureHeight;
+	float deviceAspectRatio = imageWidth / (float)imageHeight;
+
+	top = ((filmApertureHeight * inchToMm / 2) / focalLength) * nearClippingPlane;
+	right = ((filmApertureWidth * inchToMm / 2) / focalLength) * nearClippingPlane;
+
+	//field of view (horizontal)
+	float fov = 2 * 180 / M_PI * atan((filmApertureWidth * inchToMm) / 2) / focalLength;
+	std::cerr << "Field of view " << fov << std::endl;
+
+	float xScale = 1;
+	float yScale = 1;
+
+	switch (fitFilm)
+	{
+	default:
+	case kFill:
+		if (filmAspectRatio > deviceAspectRatio)
+		{
+			xScale = deviceAspectRatio / filmAspectRatio;
+		}
+		else
+		{
+			yScale = filmAspectRatio / deviceAspectRatio;
+		}
+	case kOverscan:
+		if (filmAspectRatio > deviceAspectRatio)
+		{
+			yScale = filmAspectRatio / deviceAspectRatio;
+		}
+		else
+		{
+			xScale = deviceAspectRatio / filmAspectRatio;
+		}
+		break;
+	}
+
+	right *= xScale;
+	top *= yScale;
+}
 
 int main()
 {
     std::cout << "Hello World!\n"; 
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
