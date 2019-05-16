@@ -9,8 +9,8 @@
 #ifndef PCH_H
 #define PCH_H
 
-// TODO: add headers that you want to pre-compile here
 #include "glm/glm.hpp"
-#include "GLFW/glfw3.h"
+#include "glew.h"
+#include "freeglut.h"
 
 #endif //PCH_H
