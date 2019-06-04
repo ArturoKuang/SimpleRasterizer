@@ -24,9 +24,5 @@ public:
 	std::vector<FaceIndices> indices;
 
 	Mesh(std::string pathName);
-	~Mesh();
-
-private:
-
 };
 
