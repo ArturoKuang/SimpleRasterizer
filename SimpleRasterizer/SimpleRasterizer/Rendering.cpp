@@ -76,11 +76,52 @@ Face Rendering::NormalizedSpaceToScreenSpace(Face faceNormalizedSpace, float wid
 	return Face(p0ScreenSpace, p1ScreenSpace, p2ScreenSpace, faceNormalizedSpace);
 }
 
-void Rendering::Draw(Face fScreen, std::vector<Color>& frameBuffer)
+void Rendering::Draw(Face fScreen, FrameBuffer* frameBuffer, Textures* texture)
 {
+	//compute clamped bounding box
+	glm::vec2 mini;
+	glm::vec2 maxi;
+	BoundingBox(fScreen, frameBuffer->width, frameBuffer->height, mini, maxi);
+
+	for (auto x0 = mini.x; x0 <= maxi.x; ++x0)
+	{
+		for (auto y0 = mini.y; y0 <= maxi.y; ++y0)
+		{
+			//compute barycentric coordinates of the current pixel
+			auto bary = Barycentre(glm::vec2(x0, y0), fScreen.v0.position, fScreen.v1.position, fScreen.v2.position);
+			//negitive means we are outisde trinagle
+			if (bary.x < 0.0f || bary.y < 0 || bary.z < 0)
+				continue;
+
+			//interpolate depth at current pixel
+			float z = fScreen.v0.position.z * bary.x + fScreen.v1.position.z * bary.y + fScreen.v2.position.z * bary.z;
+			//if current triangle pixel is closer than the last one drawn
+			if (z < frameBuffer->GetDepth(x0, y0))
+			{
+				//compute prespective correct interpolation
+				auto persp = glm::vec3(bary.x / fScreen.v0.position.w, bary.y / fScreen.v1.position.w, bary.z / fScreen.v2.position.w);
+				persp = persp * (float)(1.0 / (persp.x + persp.y + persp.z));
+				// Perspective interpolation of texture coordinates and normal.
+				auto tex = persp.x * fScreen.v0.uv + persp.y * fScreen.v1.uv + persp.z * fScreen.v2.uv;
+				auto nor = persp.x * fScreen.v0.normal + persp.y * fScreen.v1.normal + persp.z * fScreen.v2.normal;
+				auto diffuse = 1.5*glm::max(0.0f, glm::dot(glm::normalize(glm::vec3(nor.x, nor.y, nor.z)), glm::normalize(glm::vec3(0.0, 1.0, 1.0))));
+				Color color = {
+					diffuse * texture->GetPixel(tex.x, tex.y),
+					diffuse * texture->GetPixel(tex.x + 1, tex.y + 1),
+					diffuse * texture->GetPixel(tex.x + 2, tex.y + 2),
+					diffuse * texture->GetPixel(tex.x + 3, tex.y + 3)
+				};
+				
+
+				frameBuffer->SetColor(x0, y0, color);
+				frameBuffer->SetDepth(x0, y0, z);
+
+			}
+		}
+	}
 }
 
-glm::vec2* Rendering::BoundingBox(Face vs, float width, float height)
+void Rendering::BoundingBox(Face vs, float width, float height, glm::vec2& v0, glm::vec2& v1)
 {
 	glm::vec2 boundingBoxPoints[2];
 
@@ -98,10 +139,8 @@ glm::vec2* Rendering::BoundingBox(Face vs, float width, float height)
 	auto finalMin = glm::clamp(glm::min(mini, maxi), glm::vec2(0.0f, 0.0f), lim);
 	auto finalMax = glm::clamp(glm::max(mini, maxi), glm::vec2(0.0f, 0.0f), lim);
 
-	boundingBoxPoints[0] = finalMin;
-	boundingBoxPoints[1] = finalMax;
-
-	return boundingBoxPoints;
+	v0 = finalMin;
+	v1 = finalMax;
 }
 
 glm::vec3 Rendering::Barycentre(glm::vec2 point, glm::vec4 v0, glm::vec4 v1, glm::vec4 v2)
