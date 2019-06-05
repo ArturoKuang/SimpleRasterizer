@@ -14,18 +14,12 @@
 #include "freeglut.h"
 
 
-enum FitResolutionGate
-{
-	kFill = 0,
-	kOverscan = 1
-};
-
-
 struct Color
 {
 	unsigned char r;
 	unsigned char g;
 	unsigned char b;
+	unsigned char a;
 };
 
 

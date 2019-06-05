@@ -19,9 +19,10 @@ class Textures
 {
 public:
 	Textures(std::string pathName);
-	std::vector<std::uint8_t> GetPixels() { return this->pixels; }
+	std::vector<uint8_t> GetPixels() { return this->pixels; }
 	std::uint32_t GetWidth() const { return this->width; }
 	std::uint32_t GetHeight() const { return this->height; };
+	uint8_t GetPixel(int x, int y) { return this->pixels[y * width + x]; }
 	bool HasAlphaChannel() { return BitsPerPixel == 32; }
 
 private:

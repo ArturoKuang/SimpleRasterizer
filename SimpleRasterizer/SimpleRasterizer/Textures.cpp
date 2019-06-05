@@ -5,100 +5,93 @@
 Textures::Textures(std::string pathName)
 {
 	std::fstream hFile(pathName, std::ios::in | std::ios::binary);
+	if (!hFile.is_open()) { throw std::invalid_argument("File Not Found."); }
 
-	if (!hFile.is_open())
+	std::uint8_t Header[18] = { 0 };
+	std::vector<std::uint8_t> ImageData;
+	static std::uint8_t DeCompressed[12] = { 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+	static std::uint8_t IsCompressed[12] = { 0x0, 0x0, 0xA, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+
+	hFile.read(reinterpret_cast<char*>(&Header), sizeof(Header));
+
+	if (!std::memcmp(DeCompressed, &Header, sizeof(DeCompressed)))
 	{
-		throw std::invalid_argument("File not found.");
-	}
-
-	uint8_t header[18] = { 0 };
-	std::vector<uint8_t> imageData;
-
-	static uint8_t deCompressed[12] = { 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
-	static uint8_t isCompressed[12] = { 0x0, 0x0, 0xA, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
-
-	hFile.read(reinterpret_cast<char*>(&header), sizeof(deCompressed));
-
-	if (!memcmp(deCompressed, &header, sizeof(header)))
-	{
-		BitsPerPixel = header[16];
-		width = header[13] * 256 + header[12];
-		height = header[15] * 256 + header[14];
+		BitsPerPixel = Header[16];
+		width = Header[13] * 256 + Header[12];
+		height = Header[15] * 256 + Header[14];
 		size = ((width * BitsPerPixel + 31) / 32) * 4 * height;
 
 		if ((BitsPerPixel != 24) && (BitsPerPixel != 32))
 		{
 			hFile.close();
-			throw std::invalid_argument("Invalid file format. Required 24 or 32 bit image");
-
-			imageData.resize(size);
-			ImageCompressed = false;
-			hFile.read(reinterpret_cast<char*>(imageData.data()), size);
+			throw std::invalid_argument("Invalid File Format. Required: 24 or 32 Bit Image.");
 		}
-		else if (memcmp(isCompressed, &header, sizeof(isCompressed)))
-		{
-			BitsPerPixel = header[16];
-			width = header[13] * 256 + header[12];
-			height = header[15] * 256 + header[14];
-			size = ((width * BitsPerPixel + 31) / 32) * 4 * height;
 
-			if ((BitsPerPixel != 24) && (BitsPerPixel != 32))
-			{
-				hFile.close;
-				std::invalid_argument("Invalid file format. Required 24 or 32 bit image");
-			}
+		ImageData.resize(size);
+		ImageCompressed = false;
+		hFile.read(reinterpret_cast<char*>(ImageData.data()), size);
+	}
+	else if (!std::memcmp(IsCompressed, &Header, sizeof(IsCompressed)))
+	{
+		BitsPerPixel = Header[16];
+		width = Header[13] * 256 + Header[12];
+		height = Header[15] * 256 + Header[14];
+		size = ((width * BitsPerPixel + 31) / 32) * 4 * height;
 
-			PixelInfo Pixel = { 0 };
-			int currentByte = 0;
-			size_t currentPixel = 0;
-			ImageCompressed = true;
-			uint8_t chunkHeader = { 0 };
-			int BytesPerPixel = (BitsPerPixel / 8);
-			imageData.resize(width * height * sizeof(PixelInfo));
-
-			do
-			{
-				hFile.read(reinterpret_cast<char*>(&chunkHeader), sizeof(chunkHeader));
-
-				if (chunkHeader < 128)
-				{
-					++chunkHeader;
-					for (int I = 0; I < chunkHeader; ++I, ++currentPixel)
-					{
-						hFile.read(reinterpret_cast<char*>(&Pixel), BytesPerPixel);
-
-						imageData[currentByte++] = Pixel.B;
-						imageData[currentByte++] = Pixel.G;
-						imageData[currentByte++] = Pixel.R;
-						if (BitsPerPixel > 24) imageData[currentByte++] = Pixel.A;
-					}
-				}
-				else
-				{
-					chunkHeader -= 127;
-					hFile.read(reinterpret_cast<char*>(&Pixel), BytesPerPixel);
-
-					for (int I = 0; I < chunkHeader; ++I, ++currentPixel)
-					{
-						imageData[currentByte++] = Pixel.B;
-						imageData[currentByte++] = Pixel.G;
-						imageData[currentByte++] = Pixel.R;
-						if (BitsPerPixel > 24) imageData[currentByte++] = Pixel.A;
-					}
-				}
-			} while (currentPixel < (width * height));
-		}
-		else
+		if ((BitsPerPixel != 24) && (BitsPerPixel != 32))
 		{
 			hFile.close();
-			throw std::invalid_argument("Invalid File Format. Required: 24 or 32 Bit TGA File.");
+			throw std::invalid_argument("Invalid File Format. Required: 24 or 32 Bit Image.");
 		}
 
+		PixelInfo Pixel = { 0 };
+		int CurrentByte = 0;
+		std::size_t CurrentPixel = 0;
+		ImageCompressed = true;
+		std::uint8_t ChunkHeader = { 0 };
+		int BytesPerPixel = (BitsPerPixel / 8);
+		ImageData.resize(width * height * sizeof(PixelInfo));
+
+		do
+		{
+			hFile.read(reinterpret_cast<char*>(&ChunkHeader), sizeof(ChunkHeader));
+
+			if (ChunkHeader < 128)
+			{
+				++ChunkHeader;
+				for (int I = 0; I < ChunkHeader; ++I, ++CurrentPixel)
+				{
+					hFile.read(reinterpret_cast<char*>(&Pixel), BytesPerPixel);
+
+					ImageData[CurrentByte++] = Pixel.B;
+					ImageData[CurrentByte++] = Pixel.G;
+					ImageData[CurrentByte++] = Pixel.R;
+					if (BitsPerPixel > 24) ImageData[CurrentByte++] = Pixel.A;
+				}
+			}
+			else
+			{
+				ChunkHeader -= 127;
+				hFile.read(reinterpret_cast<char*>(&Pixel), BytesPerPixel);
+
+				for (int I = 0; I < ChunkHeader; ++I, ++CurrentPixel)
+				{
+					ImageData[CurrentByte++] = Pixel.B;
+					ImageData[CurrentByte++] = Pixel.G;
+					ImageData[CurrentByte++] = Pixel.R;
+					if (BitsPerPixel > 24) ImageData[CurrentByte++] = Pixel.A;
+				}
+			}
+		} while (CurrentPixel < (width * height));
+	}
+	else
+	{
 		hFile.close();
-		this->pixels = imageData;
+		throw std::invalid_argument("Invalid File Format. Required: 24 or 32 Bit TGA File.");
 	}
 
-
+	hFile.close();
+	this->pixels = ImageData;
 
 }
 

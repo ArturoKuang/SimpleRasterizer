@@ -4,6 +4,7 @@
 
 #include "pch.h"
 #include "Mesh.h"
+#include "Textures.h"
 
 #define REFRESH_DELAY	  10 //ms
 uint32_t width = 512, height = 512;
@@ -74,7 +75,6 @@ void InitGL(int* argc, char** argv)
 
 int main(int argc, char** argv)
 {
-	Mesh* test = new Mesh("../Resources/dragon.obj");
 	InitGL(&argc, argv);
 	glutMainLoop();
 }
