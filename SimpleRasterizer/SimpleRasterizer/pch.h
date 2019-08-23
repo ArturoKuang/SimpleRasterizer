@@ -10,9 +10,6 @@
 #define PCH_H
 
 #include "glm/glm.hpp"
-#include "glew.h"
-#include "freeglut.h"
-
 
 struct Color
 {
