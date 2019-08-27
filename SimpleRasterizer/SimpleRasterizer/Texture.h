@@ -15,10 +15,10 @@ typedef union PixelInfo
 	};
 } *PPixelInfo;
 
-class Textures
+class Texture
 {
 public:
-	Textures(std::string pathName);
+	Texture(std::string pathName);
 	std::vector<uint8_t> GetPixels() { return this->pixels; }
 	std::uint32_t GetWidth() const { return this->width; }
 	std::uint32_t GetHeight() const { return this->height; };

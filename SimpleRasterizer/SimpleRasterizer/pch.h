@@ -11,6 +11,9 @@
 
 #include "glm/glm.hpp"
 
+
+typedef unsigned char byte;
+
 struct Color
 {
 	uint8_t r;
